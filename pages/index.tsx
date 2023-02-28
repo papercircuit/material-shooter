@@ -5,6 +5,7 @@ export default function Home() {
   const engineRef = useRef<Matter.Engine | null>(null);
   const worldRef = useRef<Matter.World | null>(null);
   const circleRef = useRef<Matter.Body | null>(null);
+  const bulletsRef = useRef<Matter.Body[]>([]);
 
   useEffect(() => {
     // Initialize Matter.js
@@ -45,10 +46,24 @@ export default function Home() {
     const keys = {};
     window.addEventListener('keydown', (event) => {
       keys[event.code] = true;
+      if (event.code === 'Space') {
+        const bullet = Matter.Bodies.circle(circle.position.x, circle.position.y, 10, {
+          render: {
+            fillStyle: '#f00',
+          },
+        });
+        const speed = 10;
+        const dx = keys['ArrowRight'] ? speed : keys['ArrowLeft'] ? -speed : 0;
+        const dy = keys['ArrowDown'] ? speed : keys['ArrowUp'] ? -speed : 0;
+        Matter.Body.setVelocity(bullet, { x: dx, y: dy });
+        bulletsRef.current.push(bullet);
+        Matter.World.add(world, bullet);
+      }
     });
     window.addEventListener('keyup', (event) => {
       keys[event.code] = false;
     });
+
     Matter.Events.on(engine, 'beforeUpdate', () => {
       const speed = 5;
       if (keys['ArrowLeft']) {
@@ -63,6 +78,13 @@ export default function Home() {
       if (keys['ArrowDown']) {
         Matter.Body.translate(circle, { x: 0, y: speed });
       }
+
+      // Remove bullets that are off-screen
+      bulletsRef.current.forEach((bullet) => {
+        if (bullet.position.y < 0 || bullet.position.y > 600 || bullet.position.x < 0 || bullet.position.x > 800) {
+          Matter.Composite.remove(world, bullet);
+        }
+      });
     });
 
     // Cleanup
